@@ -44,19 +44,22 @@ Siehe [docs/wiring.md](docs/wiring.md).
 
 ### 2. Firmware auf den Mega
 
-Auf dem Pi (oder jedem anderen Rechner) mit
-[arduino-cli](https://arduino.github.io/arduino-cli/):
+Die Firmware ist ein [PlatformIO](https://platformio.org/)-Projekt. Auf dem Pi
+(oder jedem anderen Rechner):
 
 ```bash
-arduino-cli core install arduino:avr
+pipx install platformio
 ```
 
 ```bash
-cd firmware && make upload PORT=/dev/ttyACM0
+cd firmware && pio run -t upload
 ```
 
-Alternativ `firmware/TypewriterBridge/TypewriterBridge.ino` in der Arduino-IDE
-öffnen, Board „Arduino Mega 2560“ wählen, hochladen.
+Der serielle Port wird automatisch erkannt; sonst `--upload-port /dev/ttyACM0`
+anhängen. Läuft `typewriterd` schon, vorher mit
+`sudo systemctl stop typewriterd` anhalten, weil der Dienst den Port belegt.
+In VS Code genügt es, den Ordner `firmware/` mit der PlatformIO-Erweiterung zu
+öffnen.
 
 Danach muss die Schreibmaschine über ihre Tastatur wieder normal funktionieren –
 das ist der erste Test, noch ganz ohne Pi-Software.

@@ -33,6 +33,7 @@
  *   to the keyboard; pin 4 additionally to Mega GND.
  */
 
+#include <Arduino.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
 

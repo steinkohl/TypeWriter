@@ -30,7 +30,7 @@ Der Pi schickt immer genau ein Kommando und wartet auf `ok` oder `err …`
 ## Zum Ausprobieren
 
 ```bash
-python3 -m serial.tools.miniterm /dev/ttyACM0 115200 --eol LF
+cd firmware && pio device monitor
 ```
 
 Dann z. B. `T 03` eingeben: Die Schreibmaschine tippt ein „e“.
