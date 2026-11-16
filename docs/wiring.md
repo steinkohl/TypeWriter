@@ -57,7 +57,7 @@ und der Mega hängt an den beiden Tastatur-Steckern der Hauptplatine.
 - Die Pins sind fest an die Ports gebunden (die Firmware liest/schreibt ganze
   Ports, damit sie schnell genug auf die 200-µs-Abfrageimpulse der
   Schreibmaschine reagiert). Wer andere Pins will, muss die Port-Zugriffe in
-  `firmware/src/main.cpp` anpassen.
+  `firmware/lib/TypewriterBridge/src/` (`TypewriterPort.cpp`, `KeyboardScanner.cpp`) anpassen.
 - Zur Schreibmaschine hin verhält sich der Mega wie ein Schalter (Open Drain):
   Er zieht Zeilen nur auf Masse oder lässt sie los, er treibt nie aktiv 5 V.
 - Vorausgesetzt wird 5-V-Logik auf der Hauptplatine (so lief auch der

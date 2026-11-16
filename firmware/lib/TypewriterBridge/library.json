@@ -1,0 +1,7 @@
+{
+  "name": "TypewriterBridge",
+  "version": "1.0.0",
+  "description": "Keyboard passthrough and key injection for a Panasonic KX-R191 on an Arduino Mega 2560",
+  "frameworks": "arduino",
+  "platforms": "atmelavr"
+}

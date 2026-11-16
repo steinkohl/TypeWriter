@@ -61,6 +61,17 @@ anhängen. Läuft `typewriterd` schon, vorher mit
 In VS Code genügt es, den Ordner `firmware/` mit der PlatformIO-Erweiterung zu
 öffnen.
 
+Aufbau der Firmware: `firmware/src/main.cpp` verdrahtet nur die Module der
+Bibliothek `firmware/lib/TypewriterBridge`:
+
+| Modul | Aufgabe |
+|-------|---------|
+| `KeyboardScanner` | echte Tastatur abfragen und entprellen |
+| `TypewriterPort` | der Schreibmaschine die Tastatur vorspielen (Interrupt) |
+| `Tapper` | Tasten im Auftrag des Pi drücken |
+| `Protocol` | serielle Kommandos und Meldungen |
+| `Matrix.h` | gemeinsame Definitionen der Tastenmatrix |
+
 Danach muss die Schreibmaschine über ihre Tastatur wieder normal funktionieren –
 das ist der erste Test, noch ganz ohne Pi-Software.
 
