@@ -9,7 +9,7 @@
 
 #include "Matrix.h"
 
-namespace Keyboard {
+namespace KeyboardScanner {
 
 /* Called for every key that went down or up */
 typedef void (*KeyHandler) (bool down, uint8_t row, uint8_t col);
