@@ -1,0 +1,16 @@
+[Unit]
+Description=Typewriter print server (Panasonic KX-R191)
+After=network.target
+
+[Service]
+# Options: see "typewriterd --help". Put overrides into /etc/default/typewriterd:
+#   TYPEWRITERD_OPTS="--device /dev/serial/by-id/usb-Arduino... --width 65"
+EnvironmentFile=-/etc/default/typewriterd
+ExecStart=/opt/typewriter/venv/bin/typewriterd $TYPEWRITERD_OPTS
+User=typewriter
+Group=dialout
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

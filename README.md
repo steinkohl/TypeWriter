@@ -1,43 +1,143 @@
-# Typewriter Arduino project
+# Schreibmaschine als Drucker – Panasonic KX-R191
 
-## Introduction
+Eine elektronische Typenrad-Schreibmaschine (Panasonic KX-R191), die
 
-The project aims to transform a Panasonic KX-R191 electronic typewriter into a printer, i.e.
-make possible to control it from a computer.
+- sich weiterhin ganz normal **über ihre eigene Tastatur** bedienen lässt und
+- im Netzwerk als **Drucker** auftaucht.
 
-For simplicity reason, printing is done via serial over USB on the arduino.
+![Fertiger Aufbau](images/final.jpg)
 
-Arduino code handles the control of the typewriter, and `print.py` is a small python program
-to prepare for printing and sending correct data over the serial line.
+## Aufbau
 
-## Hack description
+```
+ Tastatur ──► Arduino Mega 2560 ──► Hauptplatine der Schreibmaschine
+                     ▲
+                     │ USB (seriell)
+                     ▼
+              Raspberry Pi 5  ◄── Netzwerk: Druckaufträge (Port 9100 / CUPS)
+```
 
-The typewriter is an old Panasonic KX-R191, you can see photos and information on https://typewriterdatabase.com/198x-panasonic-kxr191.2355.typewriter.
+| Teil | Aufgabe | Code |
+|------|---------|------|
+| **Arduino Mega** | Echtzeit: liest die Tastaturmatrix aus, spielt der Schreibmaschine eine Tastatur vor, reicht Tastendrücke durch und tippt die Tasten, die der Pi verlangt. Kennt keine Buchstaben, nur Matrixpositionen. | `firmware/` |
+| **Raspberry Pi 5** | Das Hirn: nimmt Druckaufträge an, bricht Text um, übersetzt Zeichen in Tastenfolgen (Umlaute, Akzente, Ersatzzeichen), steuert den Mega. | `pi/` |
 
-![Panasonic KX-R191](https://typewriterdatabase.com/img/gPanasonic%20_2355_1396525836.jpg)
+Die Tastatur wird dazu von der Hauptplatine abgezogen und an den Mega gesteckt;
+der Mega hängt an den Tastatursteckern der Hauptplatine. Details:
+[docs/wiring.md](docs/wiring.md). Das Protokoll zwischen Pi und Mega steht in
+[docs/protocol.md](docs/protocol.md).
 
-These models have an external ports to act as a printer but you need an external converter (a Panasonic KX-R60) that is now
-unobtainable. And even with the converter, it still need a LPT1 connector, with correct drivers, so very little chance to work.
+**Verhalten**
 
-On the circuit board of the typewriter, we can find some microcontroller and other components, but nothing easy to understand
-without schematics and code. 
+- Kein Druckauftrag: Die Tastatur wird 1:1 durchgereicht – auch ohne Pi
+  (nach dem Einschalten ist das Durchreichen immer an).
+- Während eines Druckauftrags ist die Tastatur gesperrt.
+  **Code-Taste drücken bricht den Druck ab.**
+- Ist die Schreibmaschine ausgeschaltet, merkt das der Mega (`err noscan`)
+  und der Auftrag wird verworfen statt ins Leere getippt.
 
-![Circuit board](images/circuit-board.jpg)
+## Inbetriebnahme
 
-So I decided (well, being very much helped by this hack description for another typewriter: https://hackaday.io/project/18506/instructions)
-to emulate keyboard.
+### 1. Verdrahten
 
-### The keyboard
+Siehe [docs/wiring.md](docs/wiring.md).
 
-They are 2 keyboards connectors, each with 10 pins. A keyboard is basically a matrix of switches. To test it for example,
-by jumping pin 4 from left connector to pin 0 of right connector, the typewriter will print an 'e' (and repeat if you leave to
-jumper wire).
+### 2. Firmware auf den Mega
 
-So first thing to do is to map all the key to their corresponding pins couple. To do that, it could be as simple
-as using the continuity tester function of a multimeter, connecting it to one pin of each connector then trying all key
-until it beeps.
+Auf dem Pi (oder jedem anderen Rechner) mit
+[arduino-cli](https://arduino.github.io/arduino-cli/):
 
-At the end, we got this marvelous table for the KX-R191
+```bash
+arduino-cli core install arduino:avr
+```
+
+```bash
+cd firmware && make upload PORT=/dev/ttyACM0
+```
+
+Alternativ `firmware/TypewriterBridge/TypewriterBridge.ino` in der Arduino-IDE
+öffnen, Board „Arduino Mega 2560“ wählen, hochladen.
+
+Danach muss die Schreibmaschine über ihre Tastatur wieder normal funktionieren –
+das ist der erste Test, noch ganz ohne Pi-Software.
+
+### 3. Dienst auf dem Pi
+
+```bash
+cd pi && sudo ./install.sh --cups
+```
+
+Das installiert `typewriterd` als systemd-Dienst (lauscht auf Port 9100) und –
+mit `--cups` – eine CUPS-Warteschlange „Schreibmaschine“, die Dokumente in
+reinen Text umwandelt. Einstellungen (serieller Port, Zeilenbreite, Pausen)
+kommen nach `/etc/default/typewriterd`, z. B.:
+
+```
+TYPEWRITERD_OPTS="--device /dev/ttyACM0 --width 65 --key-gap 90"
+```
+
+Alle Optionen: `typewriterd --help`.
+
+## Drucken
+
+```bash
+echo "Hallo Welt" | typewriter-print
+```
+
+```bash
+typewriter-print brief.txt --host raspberrypi.local
+```
+
+```bash
+nc raspberrypi.local 9100 < brief.txt
+```
+
+```bash
+lp -d Schreibmaschine brief.txt
+```
+
+Von anderen Rechnern: Drucker als „AppSocket/JetDirect“ mit Adresse
+`socket://<pi>:9100` und Treiber „Generic Text-Only“ einrichten, oder die
+freigegebene CUPS-Warteschlange des Pi benutzen.
+
+Gedruckt wird reiner Text (UTF-8). Lange Zeilen werden auf 70 Zeichen
+umgebrochen. Zeichen, die das Typenrad nicht hat, werden ersetzt
+(„“ → ", – → -, € → EUR, sonst `?`); é/è/ê usw. werden über die Akzent-Tottaste
+getippt. Im Text sind außerdem diese Steuerzeichen erlaubt:
+
+| Zeichen | Funktion der Schreibmaschine |
+|---------|------------------------------|
+| `\f` (0x0C) | Seitenvorschub |
+| 0x0E | Fettdruck an/aus |
+| 0x0F | Unterstreichen an/aus |
+| 0x11 | automatischer Zeilenvorschub |
+| 0x12 / 0x13 | linken / rechten Rand setzen |
+
+## Ohne Hardware testen
+
+```bash
+cd pi && python3 -m unittest discover -s tests
+```
+
+```bash
+cd pi && python3 -m typewriter.daemon --simulate --port 9100
+```
+
+Im Simulationsmodus „tippt“ der Dienst ins Terminal statt auf Papier.
+
+## Hintergrund
+
+Die KX-R191 hat zwar einen Druckeranschluss, braucht dafür aber einen heute
+nicht mehr erhältlichen Konverter (Panasonic KX-R60). Stattdessen wird hier die
+Tastatur emuliert (Idee: https://hackaday.io/project/18506/instructions).
+
+![Hauptplatine](images/circuit-board.jpg)
+
+### Die Tastaturmatrix
+
+Die Tastatur hat zwei Stecker mit je 10 Pins und ist eine einfache
+Schaltermatrix: linker Stecker = Spalten, rechter Stecker = Zeilen. Verbindet
+man z. B. Pin 3 links mit Pin 0 rechts, tippt die Schreibmaschine ein „e“.
 
 ```
 +-----+-----+-------+-----------+-----+----------+-----+-----+-------+-------+----------------+
@@ -56,63 +156,25 @@ At the end, we got this marvelous table for the KX-R191
 +-----+-----+-------+-----------+-----+----------+-----+-----+-------+-------+----------------+
 ```
 
-For now on, I may refer to the left connector as the "column" connector, and the right connector as the "row" connector.
+(Spalten = Pins des linken Steckers, Zeilen = Pins des rechten Steckers.)
 
-### Emulating the keyboard
+### Wie die Schreibmaschine die Tastatur abfragt
 
-Once mapping is known, we got to emulate keyboard with all the connector pins. The principle for guessing which keys
-are pressed is that the typewriter will sequencially "select" a column and "look" if any row is enabled.
+Die Hauptplatine zieht reihum jede Spalte für ca. 200 µs auf Masse und schaut,
+ob dabei eine Zeile mit auf Masse geht – dann ist die Taste an dieser Kreuzung
+gedrückt.
 
-Electronically speaking, all pins from left connectors will be sequencially (in decreasing order) temporary pulled down for 200µs and if one
-(or more) pin of the right is also pulled down, it means that the key is pressed. 
+Der Mega hält intern eine Matrix „welche Tasten sollen gerade gedrückt sein“
+(echte Tastatur ODER vom Pi getippte Tasten). Ein Pin-Change-Interrupt auf den
+Spaltenleitungen zieht bei jedem Abfrageimpuls sofort die passenden Zeilen auf
+Masse. Dadurch funktionieren auch gehaltene Tasten, Shift, Tastenwiederholung
+usw. genau wie mit der Originaltastatur.
 
-So on the arduino side (function `void activate(...)`), if we want for example to print an 'e' (row 0, col 3), we have to wait that pin 3 of left
-connector is down, then we set pin 0 of right connector to `LOW` until pin 3 is `HIGH` again, 
-then we set pin 0 of right to `HIGH` again (else the typewriter will think that we've also pressed an 'r').
+## Stand
 
-`activate` function have a special case for letters that are on the same column as shift as they are the only valid case of two keys
-of the same column pressed together (the only other modifier key is Code and has no valid "partner" key in its column).
+Firmware kompiliert für den Mega 2560, die Pi-Seite ist gegen einen simulierten
+Mega getestet. Am echten Gerät wurde dieser Umbau **noch nicht** erprobt – die
+Zeiten (`--key-gap`, `--return-gap`, `--hold-scans`) müssen ggf. angepasst werden.
 
-### Arduino code
-
-The Arduino code contains the mapping table, with the symbols coded via their ISO-8859-1 decimal code (and thus their Unicode codepoint). It reads the characters from the  serial line. For now it reads every bytes and map it so it supports ISO-8859-1 encoding on the serial port.
-
-Once it has found the caracter, it will apply its "modifier" (i.e. shift/code, but also dead keys such as accents), then the character itself via `activate` (actually `activate` is called two times to support 2 cycles, for better detection).
-
-A very basic flow control is implemented: once the buffer is empty, the arduino will send 
-a '.' over the serial line.
-
-### Python code
-
-The python `print.py` is the computer-side of the project. It handles multiple things:
- 
- - Initialize serial connection with correct parameters
- - Handle flow control mechanism
- - Encode to ISO-8859-1
- - Wrap text to 70 columns for correct margin on A4 with pitch
- - Has a "typewriter" mode to control the printer, set margin, page feed, ...
-
-
-### What it looks like at the end
-
-![Final](images/final.jpg)
-
-## Utilisation
-
-### Arduino
-
-Use an arduino with enough digital pins such as the Arduino Mega 2560. 
- - Connect all the 10 pins of the left connector to the arduino (although the 6 is useless and can be omited)
- - Connect all the pins *except* 5 (caps lock led) and 4 (connect it the the ground) to the arduino
-
-Set the correct pin mapping in the `get_col_pin` and `get_row_pin` function of the code.
-
-Then `make && make upload` and you're in business.
-
-### Python
-
-The only requirements for python is `pyserial`, install it system-wide or in a virtualenv.
-
-Then run `python3 print.py --help` to see all options.
-
-
+Basiert auf dem ursprünglichen „Typewriter Arduino project“ von Xou (nur Drucken
+über den Arduino, ohne Tastatur-Durchreichung).

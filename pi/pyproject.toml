@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "typewriter"
+version = "1.0.0"
+description = "Use a Panasonic KX-R191 typewriter as a printer (Raspberry Pi side)"
+requires-python = ">=3.9"
+dependencies = ["pyserial>=3.4"]
+
+[project.scripts]
+typewriterd = "typewriter.daemon:main"
+typewriter-print = "typewriter.cli:main"
+
+[tool.setuptools]
+packages = ["typewriter"]
