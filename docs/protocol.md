@@ -1,36 +1,36 @@
-# Serielles Protokoll Pi ⇄ Mega
+# Serial protocol Pi ⇄ Mega
 
-USB-seriell, 115200 Baud, 8N1. ASCII-Zeilen, abgeschlossen mit `\n`.
-Eine Taste wird als zwei Ziffern `<Zeile><Spalte>` geschrieben (z. B. `03` = „e“,
-`87` = Shift), siehe Matrix-Tabelle im README.
+USB serial, 115200 baud, 8N1. ASCII lines terminated by `\n`.
+A key is written as two digits `<row><col>` (e.g. `03` = "e", `87` = Shift),
+see the matrix table in the README.
 
-Der Pi schickt immer genau ein Kommando und wartet auf `ok` oder `err …`
-(Stop-and-Wait, damit ist die Flusskontrolle erledigt).
+The Pi always sends exactly one command and waits for `ok` or `err …`
+(stop-and-wait, which also takes care of flow control).
 
 ## Pi → Mega
 
-| Kommando | Bedeutung |
-|----------|-----------|
-| `T <Tasten> [Pause_ms]` | Taste antippen. Bei mehreren Tasten (max. 4) sind alle bis auf die letzte Modifier: Sie werden zuerst gedrückt und zuletzt losgelassen. `T 8703 75` = Shift+e, danach 75 ms Pause. `ok` kommt erst, wenn die Taste losgelassen und die Pause vorbei ist. |
-| `P 0` / `P 1` | Durchreichen der echten Tastatur aus/an (nach Reset: an). |
-| `H <n>` | Anzahl Abfragezyklen der Schreibmaschine, die eine Taste gehalten wird (1–50, Standard 2). |
-| `X` | Abbrechen: alle vom Pi gedrückten Tasten loslassen. |
-| `?` | Status: `status fw=1 passthrough=1 scans=2 busy=0`, danach `ok`. |
+| Command | Meaning |
+|---------|---------|
+| `T <keys> [gap_ms]` | Tap a key. With several keys (max. 4), all but the last are modifiers: they are pressed first and released last. `T 8703 75` = Shift+e, then a 75 ms pause. `ok` is sent only once the key has been released and the pause is over. |
+| `P 0` / `P 1` | Physical keyboard passthrough off/on (on after reset). |
+| `H <n>` | Number of typewriter scan cycles a key is held (1–50, default 2). |
+| `X` | Cancel: release all keys pressed by the Pi. |
+| `?` | Status: `status fw=1 passthrough=1 scans=2 busy=0`, then `ok`. |
 
 ## Mega → Pi
 
-| Zeile | Bedeutung |
-|-------|-----------|
-| `hello typewriter-bridge <Version>` | nach Reset (der Mega startet neu, sobald der Pi den Port öffnet) |
-| `ok` | Kommando ausgeführt |
-| `err <Grund>` | `noscan` (Schreibmaschine fragt die Tastatur nicht ab – ausgeschaltet?), `busy`, `keys`, `row`, `arg`, `cmd`, `long` |
-| `D<Zeile><Spalte>` | Taste der echten Tastatur gedrückt (kommt jederzeit, auch bei `P 0`) |
-| `U<Zeile><Spalte>` | Taste losgelassen |
+| Line | Meaning |
+|------|---------|
+| `hello typewriter-bridge <version>` | after reset (the Mega restarts when the Pi opens the port) |
+| `ok` | command done |
+| `err <reason>` | `noscan` (typewriter is not scanning the keyboard – switched off?), `busy`, `keys`, `row`, `arg`, `cmd`, `long` |
+| `D<row><col>` | key of the physical keyboard pressed (sent at any time, also with `P 0`) |
+| `U<row><col>` | key released |
 
-## Zum Ausprobieren
+## Trying it by hand
 
 ```bash
 cd firmware && pio device monitor
 ```
 
-Dann z. B. `T 03` eingeben: Die Schreibmaschine tippt ein „e“.
+Then type e.g. `T 03`: the typewriter types an "e".

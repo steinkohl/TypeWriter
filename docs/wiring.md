@@ -1,19 +1,19 @@
-# Verdrahtung
+# Wiring
 
-Das Tastatur-Flachbandkabel wird von der Hauptplatine der Schreibmaschine
-**abgezogen**. Der Arduino Mega sitzt dazwischen: Die Tastatur hängt am Mega,
-und der Mega hängt an den beiden Tastatur-Steckern der Hauptplatine.
+The keyboard ribbon cable is **unplugged** from the typewriter mainboard. The
+Arduino Mega sits in between: the keyboard is connected to the Mega, and the
+Mega is connected to the two keyboard connectors of the mainboard.
 
 ```
- Tastatur (Matrix)                Arduino Mega 2560              Hauptplatine KX-R191
- ┌───────────────┐   10 Spalten  ┌─────────────────┐  10 Spalten ┌──────────────────┐
- │ linker Stecker├──────────────►│ D49..D40        │◄────────────┤ linker Stecker   │
+ Keyboard (matrix)                Arduino Mega 2560              KX-R191 mainboard
+ ┌───────────────┐   10 columns  ┌─────────────────┐  10 columns ┌──────────────────┐
+ │ left connector├──────────────►│ D49..D40        │◄────────────┤ left connector   │
  │               │               │        A8..A15, │             │                  │
- │               │    8 Zeilen   │        D53, D52 │   8 Zeilen  │                  │
- │ rechter Steck.├──────────────►│ D37..D30        ├────────────►│ rechter Stecker  │
+ │               │    8 rows     │        D53, D52 │   8 rows    │                  │
+ │ right conn.   ├──────────────►│ D37..D30        ├────────────►│ right connector  │
  │               │               │        D22..D29 │             │                  │
- │   Pin 4 (GND) ├───────────────┼──── GND ────────┼─────────────┤ Pin 4 (GND)      │
- │   Pin 5 (LED) ├───────────────┼─────────────────┼─────────────┤ Pin 5 (Caps-LED) │
+ │   pin 4 (GND) ├───────────────┼──── GND ────────┼─────────────┤ pin 4 (GND)      │
+ │   pin 5 (LED) ├───────────────┼─────────────────┼─────────────┤ pin 5 (caps LED) │
  └───────────────┘               └────────┬────────┘             └──────────────────┘
                                           │ USB
                                   ┌───────┴────────┐
@@ -21,46 +21,46 @@ und der Mega hängt an den beiden Tastatur-Steckern der Hauptplatine.
                                   └────────────────┘
 ```
 
-„Spalte“ = Pin des linken Steckers, „Zeile“ = Pin des rechten Steckers
-(Nummerierung wie in der Matrix-Tabelle im README, 0 = oben).
+"Column" = pin of the left connector, "row" = pin of the right connector
+(numbered as in the matrix table in the README, 0 = top).
 
-## Seite Schreibmaschine (Hauptplatine)
+## Typewriter side (mainboard)
 
-| Stecker | Pin | Mega-Pin | Port |
-|---------|-----|----------|------|
-| links (Spalten) | 0 … 7 | A8 … A15 | PK0 … PK7 |
-| links (Spalten) | 8 | D53 | PB0 |
-| links (Spalten) | 9 | D52 | PB1 |
-| rechts (Zeilen) | 0, 1, 2, 3 | D22, D23, D24, D25 | PA0 … PA3 |
-| rechts (Zeilen) | 6, 7, 8, 9 | D26, D27, D28, D29 | PA4 … PA7 |
-| rechts | 4 (GND) | GND | – |
-| rechts | 5 (Caps-Lock-LED) | – (direkt zur Tastatur) | – |
+| Connector | Pin | Mega pin | Port |
+|-----------|-----|----------|------|
+| left (columns) | 0 … 7 | A8 … A15 | PK0 … PK7 |
+| left (columns) | 8 | D53 | PB0 |
+| left (columns) | 9 | D52 | PB1 |
+| right (rows) | 0, 1, 2, 3 | D22, D23, D24, D25 | PA0 … PA3 |
+| right (rows) | 6, 7, 8, 9 | D26, D27, D28, D29 | PA4 … PA7 |
+| right | 4 (GND) | GND | – |
+| right | 5 (caps lock LED) | – (straight to the keyboard) | – |
 
-## Seite Tastatur
+## Keyboard side
 
-| Stecker | Pin | Mega-Pin | Port |
-|---------|-----|----------|------|
-| links (Spalten) | 0 … 7 | D49, D48, D47, D46, D45, D44, D43, D42 | PL0 … PL7 |
-| links (Spalten) | 8 | D41 | PG0 |
-| links (Spalten) | 9 | D40 | PG1 |
-| rechts (Zeilen) | 0, 1, 2, 3 | D37, D36, D35, D34 | PC0 … PC3 |
-| rechts (Zeilen) | 6, 7, 8, 9 | D33, D32, D31, D30 | PC4 … PC7 |
-| rechts | 4 (GND) | GND (gemeinsam mit Schreibmaschine) | – |
-| rechts | 5 (Caps-Lock-LED) | – (direkt zur Hauptplatine) | – |
+| Connector | Pin | Mega pin | Port |
+|-----------|-----|----------|------|
+| left (columns) | 0 … 7 | D49, D48, D47, D46, D45, D44, D43, D42 | PL0 … PL7 |
+| left (columns) | 8 | D41 | PG0 |
+| left (columns) | 9 | D40 | PG1 |
+| right (rows) | 0, 1, 2, 3 | D37, D36, D35, D34 | PC0 … PC3 |
+| right (rows) | 6, 7, 8, 9 | D33, D32, D31, D30 | PC4 … PC7 |
+| right | 4 (GND) | GND (shared with the typewriter) | – |
+| right | 5 (caps lock LED) | – (straight to the mainboard) | – |
 
-## Hinweise
+## Notes
 
-- **Spalte 6** hat keine Tasten und kann auf beiden Seiten offen bleiben.
-- **Pin 4 und 5** des rechten Steckers (Masse und Caps-Lock-LED) werden 1:1
-  von der Hauptplatine zur Tastatur durchverbunden. Die LED steuert weiterhin
-  die Schreibmaschine selbst. Pin 4 zusätzlich mit GND des Mega verbinden.
-- Die Pins sind fest an die Ports gebunden (die Firmware liest/schreibt ganze
-  Ports, damit sie schnell genug auf die 200-µs-Abfrageimpulse der
-  Schreibmaschine reagiert). Wer andere Pins will, muss die Port-Zugriffe in
-  `firmware/lib/TypewriterBridge/src/` (`TypewriterPort.cpp`, `KeyboardScanner.cpp`) anpassen.
-- Zur Schreibmaschine hin verhält sich der Mega wie ein Schalter (Open Drain):
-  Er zieht Zeilen nur auf Masse oder lässt sie los, er treibt nie aktiv 5 V.
-- Vorausgesetzt wird 5-V-Logik auf der Hauptplatine (so lief auch der
-  bisherige Aufbau). Im Zweifel vorher an einem Spaltenpin nachmessen.
-- Der Mega wird über USB vom Pi versorgt. Der Pi 5 selbst hat **keine**
-  direkte Verbindung zur Schreibmaschine (seine GPIOs vertragen nur 3,3 V).
+- **Column 6** has no keys and can be left unconnected on both sides.
+- **Pins 4 and 5** of the right connector (ground and caps lock LED) are
+  connected 1:1 from the mainboard to the keyboard. The typewriter itself
+  keeps driving the LED. Also connect pin 4 to the Mega's GND.
+- The pins are tied to fixed ports (the firmware reads/writes whole ports so
+  it reacts fast enough to the typewriter's 200 µs strobes). To use other
+  pins, adapt the port accesses in `firmware/lib/TypewriterBridge/src/`
+  (`TypewriterPort.cpp`, `KeyboardScanner.cpp`).
+- Towards the typewriter the Mega behaves like a switch (open drain): it only
+  pulls rows to ground or releases them, it never actively drives 5 V.
+- 5 V logic on the mainboard is assumed (the previous build ran that way). If
+  in doubt, measure a column pin first.
+- The Mega is powered via USB from the Pi. The Pi 5 itself has **no** direct
+  connection to the typewriter (its GPIOs are 3.3 V only).

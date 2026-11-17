@@ -1,51 +1,51 @@
-# Schreibmaschine als Drucker – Panasonic KX-R191
+# Typewriter as a printer – Panasonic KX-R191
 
-Eine elektronische Typenrad-Schreibmaschine (Panasonic KX-R191), die
+An electronic daisy-wheel typewriter (Panasonic KX-R191) that
 
-- sich weiterhin ganz normal **über ihre eigene Tastatur** bedienen lässt und
-- im Netzwerk als **Drucker** auftaucht.
+- can still be used normally **with its own keyboard**, and
+- shows up on the network as a **printer**.
 
-![Fertiger Aufbau](images/final.jpg)
+![Finished build](images/final.jpg)
 
-## Aufbau
+## Architecture
 
 ```
- Tastatur ──► Arduino Mega 2560 ──► Hauptplatine der Schreibmaschine
+ Keyboard ──► Arduino Mega 2560 ──► typewriter mainboard
                      ▲
-                     │ USB (seriell)
+                     │ USB (serial)
                      ▼
-              Raspberry Pi 5  ◄── Netzwerk: Druckaufträge (Port 9100 / CUPS)
+              Raspberry Pi 5  ◄── network: print jobs (port 9100 / CUPS)
 ```
 
-| Teil | Aufgabe | Code |
-|------|---------|------|
-| **Arduino Mega** | Echtzeit: liest die Tastaturmatrix aus, spielt der Schreibmaschine eine Tastatur vor, reicht Tastendrücke durch und tippt die Tasten, die der Pi verlangt. Kennt keine Buchstaben, nur Matrixpositionen. | `firmware/` |
-| **Raspberry Pi 5** | Das Hirn: nimmt Druckaufträge an, bricht Text um, übersetzt Zeichen in Tastenfolgen (Umlaute, Akzente, Ersatzzeichen), steuert den Mega. | `pi/` |
+| Part | Role | Code |
+|------|------|------|
+| **Arduino Mega** | Real time: scans the keyboard matrix, emulates a keyboard towards the typewriter, passes key presses through and taps the keys the Pi asks for. Knows no characters, only matrix positions. | `firmware/` |
+| **Raspberry Pi 5** | The brain: accepts print jobs, wraps text, translates characters into key sequences (umlauts, accents, substitutes) and drives the Mega. | `pi/` |
 
-Die Tastatur wird dazu von der Hauptplatine abgezogen und an den Mega gesteckt;
-der Mega hängt an den Tastatursteckern der Hauptplatine. Details:
-[docs/wiring.md](docs/wiring.md). Das Protokoll zwischen Pi und Mega steht in
-[docs/protocol.md](docs/protocol.md).
+The keyboard is unplugged from the mainboard and connected to the Mega; the
+Mega is connected to the keyboard connectors of the mainboard. Details:
+[docs/wiring.md](docs/wiring.md). The protocol between Pi and Mega is described
+in [docs/protocol.md](docs/protocol.md).
 
-**Verhalten**
+**Behaviour**
 
-- Kein Druckauftrag: Die Tastatur wird 1:1 durchgereicht – auch ohne Pi
-  (nach dem Einschalten ist das Durchreichen immer an).
-- Während eines Druckauftrags ist die Tastatur gesperrt.
-  **Code-Taste drücken bricht den Druck ab.**
-- Ist die Schreibmaschine ausgeschaltet, merkt das der Mega (`err noscan`)
-  und der Auftrag wird verworfen statt ins Leere getippt.
+- No print job: the keyboard is passed through 1:1 – even without a Pi
+  (passthrough is always on after power-up).
+- While a job is printing, the keyboard is locked.
+  **Pressing the Code key cancels the job.**
+- If the typewriter is switched off, the Mega notices (`err noscan`) and the
+  job is dropped instead of being typed into the void.
 
-## Inbetriebnahme
+## Setup
 
-### 1. Verdrahten
+### 1. Wiring
 
-Siehe [docs/wiring.md](docs/wiring.md).
+See [docs/wiring.md](docs/wiring.md).
 
-### 2. Firmware auf den Mega
+### 2. Mega firmware
 
-Die Firmware ist ein [PlatformIO](https://platformio.org/)-Projekt. Auf dem Pi
-(oder jedem anderen Rechner):
+The firmware is a [PlatformIO](https://platformio.org/) project. On the Pi
+(or any other computer):
 
 ```bash
 pipx install platformio
@@ -55,79 +55,79 @@ pipx install platformio
 cd firmware && pio run -t upload
 ```
 
-Der serielle Port wird automatisch erkannt; sonst `--upload-port /dev/ttyACM0`
-anhängen. Läuft `typewriterd` schon, vorher mit
-`sudo systemctl stop typewriterd` anhalten, weil der Dienst den Port belegt.
-In VS Code genügt es, den Ordner `firmware/` mit der PlatformIO-Erweiterung zu
-öffnen.
+The serial port is detected automatically; otherwise append
+`--upload-port /dev/ttyACM0`. If `typewriterd` is already running, stop it
+first with `sudo systemctl stop typewriterd`, because the service holds the
+port. In VS Code, opening the `firmware/` folder with the PlatformIO extension
+is enough.
 
-Aufbau der Firmware: `firmware/src/main.cpp` verdrahtet nur die Module der
-Bibliothek `firmware/lib/TypewriterBridge`:
+Firmware layout: `firmware/src/main.cpp` only wires together the modules of
+the library `firmware/lib/TypewriterBridge`:
 
-| Modul | Aufgabe |
-|-------|---------|
-| `KeyboardScanner` | echte Tastatur abfragen und entprellen |
-| `TypewriterPort` | der Schreibmaschine die Tastatur vorspielen (Interrupt) |
-| `Tapper` | Tasten im Auftrag des Pi drücken |
-| `Protocol` | serielle Kommandos und Meldungen |
-| `Matrix.h` | gemeinsame Definitionen der Tastenmatrix |
+| Module | Role |
+|--------|------|
+| `KeyboardScanner` | scan and debounce the physical keyboard |
+| `TypewriterPort` | emulate the keyboard towards the typewriter (interrupt) |
+| `Tapper` | press keys on behalf of the Pi |
+| `Protocol` | serial commands and events |
+| `Matrix.h` | shared definitions of the key matrix |
 
-Danach muss die Schreibmaschine über ihre Tastatur wieder normal funktionieren –
-das ist der erste Test, noch ganz ohne Pi-Software.
+After flashing, the typewriter must work normally again with its own
+keyboard – that is the first test, without any Pi software.
 
-### 3. Dienst auf dem Pi
+### 3. Service on the Pi
 
 ```bash
 cd pi && sudo ./install.sh --cups
 ```
 
-Das installiert `typewriterd` als systemd-Dienst (lauscht auf Port 9100) und –
-mit `--cups` – eine CUPS-Warteschlange „Schreibmaschine“, die Dokumente in
-reinen Text umwandelt. Einstellungen (serieller Port, Zeilenbreite, Pausen)
-kommen nach `/etc/default/typewriterd`, z. B.:
+This installs `typewriterd` as a systemd service (listening on port 9100) and –
+with `--cups` – a CUPS queue "Typewriter" that converts documents to plain
+text. Settings (serial port, line width, delays) go into
+`/etc/default/typewriterd`, e.g.:
 
 ```
 TYPEWRITERD_OPTS="--device /dev/ttyACM0 --width 65 --key-gap 90"
 ```
 
-Alle Optionen: `typewriterd --help`.
+All options: `typewriterd --help`.
 
-## Drucken
+## Printing
 
 ```bash
-echo "Hallo Welt" | typewriter-print
+echo "Hello world" | typewriter-print
 ```
 
 ```bash
-typewriter-print brief.txt --host raspberrypi.local
+typewriter-print letter.txt --host raspberrypi.local
 ```
 
 ```bash
-nc raspberrypi.local 9100 < brief.txt
+nc raspberrypi.local 9100 < letter.txt
 ```
 
 ```bash
-lp -d Schreibmaschine brief.txt
+lp -d Typewriter letter.txt
 ```
 
-Von anderen Rechnern: Drucker als „AppSocket/JetDirect“ mit Adresse
-`socket://<pi>:9100` und Treiber „Generic Text-Only“ einrichten, oder die
-freigegebene CUPS-Warteschlange des Pi benutzen.
+From other computers: add a printer of type "AppSocket/JetDirect" with the
+address `socket://<pi>:9100` and the "Generic Text-Only" driver, or use the
+Pi's shared CUPS queue.
 
-Gedruckt wird reiner Text (UTF-8). Lange Zeilen werden auf 70 Zeichen
-umgebrochen. Zeichen, die das Typenrad nicht hat, werden ersetzt
-(„“ → ", – → -, € → EUR, sonst `?`); é/è/ê usw. werden über die Akzent-Tottaste
-getippt. Im Text sind außerdem diese Steuerzeichen erlaubt:
+Jobs are plain text (UTF-8). Long lines are wrapped at 70 characters.
+Characters the daisy wheel does not have are replaced
+(“” → ", – → -, € → EUR, otherwise `?`); é/è/ê etc. are typed using the accent
+dead key. These control characters are also allowed in the text:
 
-| Zeichen | Funktion der Schreibmaschine |
-|---------|------------------------------|
-| `\f` (0x0C) | Seitenvorschub |
-| 0x0E | Fettdruck an/aus |
-| 0x0F | Unterstreichen an/aus |
-| 0x11 | automatischer Zeilenvorschub |
-| 0x12 / 0x13 | linken / rechten Rand setzen |
+| Character | Typewriter function |
+|-----------|---------------------|
+| `\f` (0x0C) | page feed |
+| 0x0E | bold on/off |
+| 0x0F | underline on/off |
+| 0x11 | automatic line feed |
+| 0x12 / 0x13 | set left / right margin |
 
-## Ohne Hardware testen
+## Testing without hardware
 
 ```bash
 cd pi && python3 -m unittest discover -s tests
@@ -137,21 +137,21 @@ cd pi && python3 -m unittest discover -s tests
 cd pi && python3 -m typewriter.daemon --simulate --port 9100
 ```
 
-Im Simulationsmodus „tippt“ der Dienst ins Terminal statt auf Papier.
+In simulation mode the service "types" into the terminal instead of onto paper.
 
-## Hintergrund
+## Background
 
-Die KX-R191 hat zwar einen Druckeranschluss, braucht dafür aber einen heute
-nicht mehr erhältlichen Konverter (Panasonic KX-R60). Stattdessen wird hier die
-Tastatur emuliert (Idee: https://hackaday.io/project/18506/instructions).
+The KX-R191 does have a printer port, but it needs a converter (Panasonic
+KX-R60) that is no longer available. Instead, this project emulates the
+keyboard (idea: https://hackaday.io/project/18506/instructions).
 
-![Hauptplatine](images/circuit-board.jpg)
+![Mainboard](images/circuit-board.jpg)
 
-### Die Tastaturmatrix
+### The keyboard matrix
 
-Die Tastatur hat zwei Stecker mit je 10 Pins und ist eine einfache
-Schaltermatrix: linker Stecker = Spalten, rechter Stecker = Zeilen. Verbindet
-man z. B. Pin 3 links mit Pin 0 rechts, tippt die Schreibmaschine ein „e“.
+The keyboard has two connectors with 10 pins each and is a simple switch
+matrix: left connector = columns, right connector = rows. Connecting e.g. pin 3
+on the left with pin 0 on the right makes the typewriter type an "e".
 
 ```
 +-----+-----+-------+-----------+-----+----------+-----+-----+-------+-------+----------------+
@@ -170,25 +170,23 @@ man z. B. Pin 3 links mit Pin 0 rechts, tippt die Schreibmaschine ein „e“.
 +-----+-----+-------+-----------+-----+----------+-----+-----+-------+-------+----------------+
 ```
 
-(Spalten = Pins des linken Steckers, Zeilen = Pins des rechten Steckers.)
+(Columns = pins of the left connector, rows = pins of the right connector.)
 
-### Wie die Schreibmaschine die Tastatur abfragt
+### How the typewriter scans the keyboard
 
-Die Hauptplatine zieht reihum jede Spalte für ca. 200 µs auf Masse und schaut,
-ob dabei eine Zeile mit auf Masse geht – dann ist die Taste an dieser Kreuzung
-gedrückt.
+The mainboard pulls each column low in turn for about 200 µs and checks
+whether a row goes low with it – if so, the key at that crossing is pressed.
 
-Der Mega hält intern eine Matrix „welche Tasten sollen gerade gedrückt sein“
-(echte Tastatur ODER vom Pi getippte Tasten). Ein Pin-Change-Interrupt auf den
-Spaltenleitungen zieht bei jedem Abfrageimpuls sofort die passenden Zeilen auf
-Masse. Dadurch funktionieren auch gehaltene Tasten, Shift, Tastenwiederholung
-usw. genau wie mit der Originaltastatur.
+The Mega keeps an internal matrix of "which keys should be pressed right now"
+(physical keyboard OR keys tapped by the Pi). A pin change interrupt on the
+column lines immediately pulls the matching rows low on every strobe. That way
+held keys, Shift, key repeat etc. work exactly as with the original keyboard.
 
-## Stand
+## Status
 
-Firmware kompiliert für den Mega 2560, die Pi-Seite ist gegen einen simulierten
-Mega getestet. Am echten Gerät wurde dieser Umbau **noch nicht** erprobt – die
-Zeiten (`--key-gap`, `--return-gap`, `--hold-scans`) müssen ggf. angepasst werden.
+The firmware compiles for the Mega 2560, and the Pi side is tested against a
+simulated Mega. This rebuild has **not yet** been tried on the real machine –
+the timings (`--key-gap`, `--return-gap`, `--hold-scans`) may need tuning.
 
-Basiert auf dem ursprünglichen „Typewriter Arduino project“ von Xou (nur Drucken
-über den Arduino, ohne Tastatur-Durchreichung).
+Based on the original "Typewriter Arduino project" by Xou (printing via the
+Arduino only, without keyboard passthrough).

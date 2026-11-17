@@ -94,9 +94,9 @@ class DaemonTest(unittest.TestCase):
         self.worker.join(5)
 
     def test_job_round_trip(self):
-        self.tw.submit("Füße & Öl: 100%\nZeile 2".encode("utf-8"))
+        self.tw.submit("Füße & Öl: 100%\nLine 2".encode("utf-8"))
         self.tw.wait_idle()
-        self.assertEqual(self.fake.text, "\nFüße & Öl: 100%\nZeile 2\n")
+        self.assertEqual(self.fake.text, "\nFüße & Öl: 100%\nLine 2\n")
         self.assertTrue(self.fake.passthrough)
         self.assertIn("P 0", self.fake.commands)
         self.assertEqual(self.fake.gaps[0], 3)   # return
@@ -107,12 +107,12 @@ class DaemonTest(unittest.TestCase):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
             with socket.create_connection(server.server_address) as sock:
-                sock.sendall(b"Hallo Welt\n")
+                sock.sendall(b"Hello world\n")
             for _ in range(200):
-                if self.fake.text.endswith("Welt\n"):
+                if self.fake.text.endswith("world\n"):
                     break
                 threading.Event().wait(0.02)
-            self.assertEqual(self.fake.text, "\nHallo Welt\n")
+            self.assertEqual(self.fake.text, "\nHello world\n")
         finally:
             server.shutdown()
             server.server_close()

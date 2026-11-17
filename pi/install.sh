@@ -17,13 +17,13 @@ systemctl daemon-reload
 systemctl enable --now typewriterd
 
 if [ "${1:-}" = "--cups" ]; then
-	# CUPS queue "Schreibmaschine": converts documents to plain text and
+	# CUPS queue "Typewriter": converts documents to plain text and
 	# hands them to typewriterd.
 	apt-get install -y cups cups-filters
-	lpadmin -p Schreibmaschine -E -v socket://localhost:9100 \
+	lpadmin -p Typewriter -E -v socket://localhost:9100 \
 		-m lsb/usr/cupsfilters/textonly.ppd \
 		-D "Panasonic KX-R191" -o printer-is-shared=true
-	echo "CUPS queue 'Schreibmaschine' created: lp -d Schreibmaschine file.txt"
+	echo "CUPS queue 'Typewriter' created: lp -d Typewriter file.txt"
 fi
 
-echo "Done. Test with: echo 'Hallo Welt' | typewriter-print"
+echo "Done. Test with: echo 'Hello world' | typewriter-print"
